@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Route Tables and NAT Gateway for Public and Private Subnets'
+
+Parameters:
+  VpcId:
+    Description: ID of the VPC
+    Type: String
+
+  PublicSubnetId:
+    Description: ID of the Public Subnet
+    Type: String
+
+  PrivateSubnetId:
+    Description: ID of the Private Subnet
+    Type: String
+
+  InternetGatewayId:
+    Description: ID of the Internet Gateway
+    Type: String
+
+Resources:
+  # Public Route Table - for subnets that need internet access
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-public-rt
+
+  # Route for public internet access through the Internet Gateway
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: PublicRouteTable
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0  # Route all traffic to the Internet Gateway
+      GatewayId: !Ref InternetGatewayId
+
+  # Associate Public Route Table with Public Subnet
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetId
+      RouteTableId: !Ref PublicRouteTable
+
+  # NAT Gateway Elastic IP - static IP for the NAT Gateway
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-nat-eip
+
+  # NAT Gateway - allows outbound internet access for private subnets
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnetId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-nat-gw
+
+  # Private Route Table - for subnets with outbound-only internet access
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-private-rt
+
+  # Route for private subnets to access internet through NAT Gateway
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    DependsOn: NatGateway
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0  # Route all outbound traffic to the NAT Gateway
+      NatGatewayId: !Ref NatGateway
+
+  # Associate Private Route Table with Private Subnet
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetId
+      RouteTableId: !Ref PrivateRouteTable
+
+Outputs:
+  PublicRouteTableId:
+    Description: Public Route Table ID
+    Value: !Ref PublicRouteTable
+
+  PrivateRouteTableId:
+    Description: Private Route Table ID
+    Value: !Ref PrivateRouteTable
+
+  NatGatewayId:
+    Description: NAT Gateway ID
+    Value: !Ref NatGateway

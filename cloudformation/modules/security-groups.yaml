@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Security Groups for EC2 Instances'
+
+Parameters:
+  VpcId:
+    Description: ID of the VPC
+    Type: String
+
+  SSHLocation:
+    Description: IP address range allowed for SSH access (in CIDR notation)
+    Type: String
+    Default: 0.0.0.0/0
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+
+Resources:
+  # Security Group for Public EC2 instances
+  PublicEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for public EC2 instances
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Allow SSH access from specified location
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+        # Add more ingress rules as needed (e.g., HTTP, HTTPS)
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-public-ec2-sg
+
+  # Security Group for Private EC2 instances
+  PrivateEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for private EC2 instances
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Allow SSH from public instances only
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref PublicEC2SecurityGroup
+        # Add more ingress rules as needed for specific applications
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-private-ec2-sg
+
+Outputs:
+  PublicEC2SecurityGroupId:
+    Description: Public EC2 Security Group ID
+    Value: !Ref PublicEC2SecurityGroup
+
+  PrivateEC2SecurityGroupId:
+    Description: Private EC2 Security Group ID
+    Value: !Ref PrivateEC2SecurityGroup

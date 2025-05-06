@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'EC2 Instances in Public and Private Subnets'
+
+Parameters:
+  PublicSubnetId:
+    Description: ID of the Public Subnet
+    Type: String
+
+  PrivateSubnetId:
+    Description: ID of the Private Subnet
+    Type: String
+
+  PublicSecurityGroupId:
+    Description: ID of the Security Group for public EC2 instances
+    Type: String
+
+  PrivateSecurityGroupId:
+    Description: ID of the Security Group for private EC2 instances
+    Type: String
+
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+
+  LatestAmiId:
+    Description: Latest Amazon Linux 2 AMI
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+Resources:
+  # EC2 instance in the Public Subnet
+  PublicEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - !Ref PublicSecurityGroupId
+      SubnetId: !Ref PublicSubnetId
+      KeyName: !Ref KeyName
+      ImageId: !Ref LatestAmiId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-public-ec2
+
+  # EC2 instance in the Private Subnet
+  PrivateEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - !Ref PrivateSecurityGroupId
+      SubnetId: !Ref PrivateSubnetId
+      KeyName: !Ref KeyName
+      ImageId: !Ref LatestAmiId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-private-ec2
+
+Outputs:
+  PublicEC2InstanceId:
+    Description: Public EC2 Instance ID
+    Value: !Ref PublicEC2Instance
+
+  PublicEC2InstancePublicIP:
+    Description: Public IP address of the public EC2 instance
+    Value: !GetAtt PublicEC2Instance.PublicIp
+
+  PrivateEC2InstanceId:
+    Description: Private EC2 Instance ID
+    Value: !Ref PrivateEC2Instance
+
+  PrivateEC2InstancePrivateIP:
+    Description: Private IP address of the private EC2 instance
+    Value: !GetAtt PrivateEC2Instance.PrivateIp
