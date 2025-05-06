@@ -1,0 +1,9 @@
+project_name = "lab1"
+region = "ap-southeast-1"
+vpc_cidr = "10.0.0.0/16"
+public_subnet_cidr = "10.0.100.0/24"
+private_subnet_cidr = "10.0.1.0/24"
+ami_id = "ami-0e8ebb0ab254bb563"
+ec2_instance_type = "t3.micro"
+allow_ssh_ip = ["171.250.165.83/32"] # my IP
+key_name = "lab1-terraform"
